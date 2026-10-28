@@ -43,21 +43,18 @@ Códigos de salida de `--audit`: `0` nada encontrado, `2` algo crítico, `3` avi
 
 | Menú | Qué |
 |---|---|
-| Revisión total | todo lo de abajo en una pasada: auditoría completa, journal contra indicadores de spyware, opcionalmente el escaneo de Zero Breach Toolkit, un solo informe y exportación opcional |
-| Auditoría rápida | actualizaciones y reinicio pendientes, firewall, SELinux/AppArmor, puertos abiertos, permisos de `~/.ssh`, claves autorizadas, programas que arrancan solos, procesos que corren desde `/tmp` o con el ejecutable borrado, antigüedad de las firmas de ClamAV, tokens en nombres de archivo, archivos escribibles por cualquiera, permisos de Flatpak, intentos fallidos de SSH |
-| Auditoría completa | todo lo anterior y, con **una sola** petición de root: rkhunter, chkrootkit, Lynis, integridad de paquetes (`rpm -Va` / `debsums` / `pacman -Qkk`), programas SUID sin paquete, configuración de `sshd`, cuentas sin contraseña, cron del sistema, salud SMART de los discos, nftables |
-| ClamAV | actualizar firmas; escanear Descargas, el home, una ruta o todo el sistema; mover lo detectado a la cuarentena |
-| Spyware | corre Zero Breach Toolkit (fijado a un commit revisado) y puede revisar todo el journal de systemd contra sus indicadores (en streaming, sin copiarlo a disco) |
-| Secretos | busca tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) y claves privadas dentro de archivos |
-| Limpieza | caché de paquetes, paquetes sin uso (con vista previa), runtimes Flatpak sin uso, journal, papelera, miniaturas, coredumps |
-| Endurecimiento | firewall, actualización automática de firmas de ClamAV, actualizaciones automáticas donde la distro las recomienda |
-| Actualizar | la herramienta de actualización de tu distro, Flatpak, firmware |
-| Actualizar componentes externos | muestra qué cambió en Zero Breach Toolkit y actualiza solo si dices que sí; refresca sus indicadores |
-| Exportar para tu IA | deja el último informe en `output_docs/` como `.md` con fecha y hora (censurado o completo) para que tú se lo des a la IA en la que confíes |
+| **1 · Revisión total** | todo en una pasada: auditoría completa, journal contra indicadores de spyware, opcionalmente el escaneo de Zero Breach Toolkit, un solo informe y exportación opcional |
+| **2 · Revisar ›** | **Auditoría rápida**: actualizaciones y reinicio pendientes, firewall, SELinux/AppArmor, puertos abiertos, permisos de `~/.ssh`, claves autorizadas, programas que arrancan solos, procesos que corren desde `/tmp` o con el ejecutable borrado, antigüedad de las firmas de ClamAV, tokens en nombres de archivo, archivos escribibles por cualquiera, permisos de Flatpak, intentos fallidos de SSH. **Auditoría completa**: lo mismo y, con **una sola** petición de root, rkhunter, chkrootkit, Lynis, integridad de paquetes (`rpm -Va` / `debsums` / `pacman -Qkk`), programas SUID sin paquete, configuración de `sshd`, cuentas sin contraseña, cron del sistema, salud SMART de los discos, nftables. **Antivirus (ClamAV) ›**: actualizar firmas; escanear Descargas, el home, una carpeta o todo el equipo; mover lo detectado a la cuarentena. **Spyware ›**: Zero Breach Toolkit (fijado a un commit revisado) y la revisión de todo el journal de systemd contra sus indicadores (en streaming, sin copia a disco). **Secretos expuestos**: tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) y claves privadas dentro de archivos |
+| **3 · Limpiar ›** | caché de paquetes, paquetes sin uso (con vista previa), runtimes Flatpak sin uso, journal antiguo, papelera, miniaturas, coredumps |
+| **4 · Proteger ›** | firewall, firmas de ClamAV automáticas, actualizaciones automáticas donde la distro las recomienda, actualizar el sistema ahora (herramienta de la distro, Flatpak, firmware) |
+| **5 · Informes ›** | ver el último informe; exportarlo a `output_docs/` como `.md` con fecha y hora (censurado o completo) para que tú se lo des a la IA en la que confíes |
+| **6 · Herramientas ›** | instalar lo que falta; actualizar componentes externos (muestra qué cambió en Zero Breach Toolkit y actualiza solo si dices que sí) |
 
-Toda acción que modifica el sistema **muestra el comando exacto y pregunta antes**. Nada de lo
-detectado se borra: va a la cuarentena con un manifiesto. La configuración del servidor SSH solo se
-reporta, nunca se edita (una edición mala puede dejarte fuera).
+Cada opción primero explica qué hace (si lee o cambia algo, si pide tu clave o usa la red, y cuánto
+tarda) y **espera tu sí**. Toda acción que modifica el sistema **muestra el comando exacto y
+pregunta antes**. Nada de lo detectado se borra: va a la cuarentena con un manifiesto. La
+configuración del servidor SSH solo se reporta, nunca se edita (una edición mala puede dejarte
+fuera).
 
 ## Distros soportadas
 
@@ -102,14 +99,14 @@ tu distribución.
 
 ## Actualizar componentes externos
 
-La opción **11 · Actualizar componentes externos** baja el historial publicado de Zero Breach Toolkit,
+**Herramientas › Actualizar componentes externos** baja el historial publicado de Zero Breach Toolkit,
 muestra los commits nuevos y un resumen de cambios, y pasa a la versión nueva **solo si dices que
 sí**. Después ofrece refrescar las listas de indicadores. La versión que THEK fija en la primera
 descarga es la que revisaron sus autores; lo más nuevo queda a tu criterio.
 
 ## Usar el informe con tu IA
 
-THEK no envía el informe a ninguna parte. La opción **12 · Exportar informe para tu IA** deja el
+THEK no envía el informe a ninguna parte. **Informes › Exportar para tu IA** deja el
 último informe en `output_docs/thek-informe-<fecha>_<hora>-<censurado|completo>.md` e imprime su
 ruta y una línea `cd` para copiar:
 

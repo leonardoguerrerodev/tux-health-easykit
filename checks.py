@@ -511,7 +511,7 @@ def secret_names():
 
 @check("secret_contents", "secrets")
 def secret_contents():
-    """Tokens and private keys inside text files under 1 MB. Slow: only from menu option 5."""
+    """Tokens and private keys inside text files under 1 MB. Slow: only from the Check menu."""
     import sys
     ssh_dir = os.path.expanduser("~/.ssh") + os.sep
     hits, n = [], 0

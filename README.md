@@ -43,21 +43,18 @@ python3 THEK_run.py --lang en       # or es; default follows your locale
 
 | Menu | What |
 |---|---|
-| Total review | all of the below in one pass: full audit, journal against spyware indicators, optionally the Zero Breach Toolkit scan, one report, optional export |
-| Quick audit | pending updates and reboot, firewall, SELinux/AppArmor, open ports, `~/.ssh` permissions, authorized keys, autostart programs, processes running from `/tmp` or with deleted executables, ClamAV signature age, tokens in file names, world-writable files, Flatpak permissions, failed SSH logins |
-| Full audit | everything above plus, with **one** root prompt: rkhunter, chkrootkit, Lynis, package integrity (`rpm -Va` / `debsums` / `pacman -Qkk`), SUID programs no package owns, `sshd` settings, accounts without password, system cron, disk SMART health, nftables |
-| ClamAV | update signatures; scan Downloads, home, a path or the whole system; move detections to a quarantine |
-| Spyware | runs Zero Breach Toolkit (pinned to a reviewed commit), and can check your whole systemd journal against its indicators (streamed, no copy written to disk) |
-| Secrets | finds tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) and private keys inside files |
-| Cleanup | package cache, unused packages (with preview), unused Flatpak runtimes, journal, trash, thumbnails, coredumps |
-| Hardening | firewall, automatic ClamAV signature updates, automatic updates where the distro recommends them |
-| Update | your distro's update tool, Flatpak, firmware |
-| Update external components | shows what changed in Zero Breach Toolkit upstream and moves only if you say yes; refreshes its indicators |
-| Export for your AI | writes the last report to `output_docs/` as a dated `.md` (redacted or full) for you to give to the AI you trust |
+| **1 · Total review** | everything in one pass: full audit, journal against spyware indicators, optionally the Zero Breach Toolkit scan, one report, optional export |
+| **2 · Check ›** | **Quick audit**: pending updates and reboot, firewall, SELinux/AppArmor, open ports, `~/.ssh` permissions, authorized keys, autostart programs, processes running from `/tmp` or with deleted executables, ClamAV signature age, tokens in file names, world-writable files, Flatpak permissions, failed SSH logins. **Full audit**: the same plus, with **one** root prompt, rkhunter, chkrootkit, Lynis, package integrity (`rpm -Va` / `debsums` / `pacman -Qkk`), SUID programs no package owns, `sshd` settings, accounts without password, system cron, disk SMART health, nftables. **Antivirus (ClamAV) ›**: update signatures; scan Downloads, home, a folder or the whole computer; move detections to a quarantine. **Spyware ›**: Zero Breach Toolkit (pinned to a reviewed commit) and a check of the whole systemd journal against its indicators (streamed, no copy on disk). **Exposed secrets**: tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) and private keys inside files |
+| **3 · Clean ›** | package cache, unused packages (with preview), unused Flatpak runtimes, old journal, trash, thumbnails, coredumps |
+| **4 · Protect ›** | firewall, automatic ClamAV signatures, automatic updates where the distro recommends them, update the system now (distro tool, Flatpak, firmware) |
+| **5 · Reports ›** | view the last report; export it to `output_docs/` as a dated `.md` (redacted or full) for you to give to the AI you trust |
+| **6 · Tools ›** | install missing tools; update external components (shows what changed in Zero Breach Toolkit and moves only if you say yes) |
 
-Every action that changes the system **shows the exact command and asks first**. Nothing detected
-is ever deleted: it goes to the quarantine with a manifest. SSH server settings are only reported,
-never edited (a wrong edit can lock you out).
+Every option first explains what it does (whether it reads or changes something, needs your password
+or the network, and how long it takes) and **waits for your yes**. Every action that changes the
+system **shows the exact command and asks first**. Nothing detected is ever deleted: it goes to the
+quarantine with a manifest. SSH server settings are only reported, never edited (a wrong edit can
+lock you out).
 
 ## Supported distributions
 
@@ -102,14 +99,14 @@ comes from your distribution.
 
 ## Updating external components
 
-Menu option **11 · Update external components** fetches Zero Breach Toolkit's published history,
+**Tools › Update external components** fetches Zero Breach Toolkit's published history,
 shows the new commits and a change summary, and moves to the new version **only if you say yes**.
 Then it offers to refresh the indicator lists. The version THEK pins on first download is the
 one its authors reviewed; anything newer is your call.
 
 ## Using the report with your AI
 
-THEK does not send the report anywhere. Menu option **12 · Export report for your AI** writes
+THEK does not send the report anywhere. **Reports › Export for your AI** writes
 the last report to `output_docs/thek-report-<date>_<time>-<redacted|full>.md` and prints its
 path and a `cd` line to copy:
 

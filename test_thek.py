@@ -19,6 +19,7 @@ os.environ["THEK_LANG"] = "en"
 
 import actions  # noqa: E402
 import checks  # noqa: E402
+import i18n  # noqa: E402
 import THEK_run as thek  # noqa: E402
 
 # tokens are assembled at runtime so this file itself never matches the secret patterns
@@ -361,6 +362,45 @@ def test_repo_has_no_personal_data():
         for n in needles:
             assert n not in text, "%s contains personal data (%r)" % (path, n)
         assert not checks.find_secrets(text), "%s contains a secret" % path
+
+
+def test_banner():
+    big = thek.banner(100)
+    assert "████████╗██╗  ██╗███████╗██╗  ██╗" in big and "T U X" in big
+    for name in ("ClamAV", "rkhunter", "chkrootkit", "Lynis", "Zero Breach Toolkit"):
+        assert name in big
+    assert "\x1b" not in big and "Check · Clean · Protect · You decide" in big and "telemetry" not in big
+    small = thek.banner(30)
+    assert "THEK" in small and "███" not in small and "Tux Health Easy Kit" in small
+    assert "\x1b[38;2;" in thek.banner(100, "rgb") and "\x1b[1;34m" in thek.banner(100, "basic")
+
+
+def test_menu_keys():
+    assert [key for key, _, _, _ in thek.MENU()] == [str(i) for i in range(1, 7)]
+
+
+def test_menu_texts():
+    """Every option has a short label and an explanation, in both languages."""
+    for lang in ("es", "en"):
+        keys = i18n.STRINGS[lang]
+        items = {k[5:] for k in keys if k.startswith("item.")}
+        infos = {k[5:] for k in keys if k.startswith("info.")}
+        assert items == infos and len(items) == 27, (lang, items ^ infos)
+
+
+def test_leaf_needs_yes():
+    ran = []
+    _, run = thek.leaf("quick", lambda: ran.append(1))
+    real = builtins.input
+    try:
+        builtins.input = lambda prompt="": "n"
+        run()
+        assert ran == []
+        builtins.input = lambda prompt="": "y"
+        run()
+        assert ran == [1]
+    finally:
+        builtins.input = real
 
 
 if __name__ == "__main__":

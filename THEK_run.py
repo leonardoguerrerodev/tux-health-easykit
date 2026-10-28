@@ -10,6 +10,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import textwrap
 import time
 
 import actions
@@ -29,6 +30,54 @@ def ask(prompt):
         return input(prompt)
     except EOFError:
         return None
+
+
+# ---------------------------------------------------------------- banner
+
+GLYPHS = {  # 'ANSI Shadow' letters, as in Zero Breach Toolkit's banner
+    "T": ["████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ██║   ", "   ╚═╝   "],
+    "H": ["██╗  ██╗", "██║  ██║", "███████║", "██╔══██║", "██║  ██║", "╚═╝  ╚═╝"],
+    "E": ["███████╗", "██╔════╝", "█████╗  ", "██╔══╝  ", "███████╗", "╚══════╝"],
+    "K": ["██╗  ██╗", "██║ ██╔╝", "█████╔╝ ", "██╔═██╗ ", "██║  ██╗", "╚═╝  ╚═╝"],
+}
+RAMP = [(25, 70, 170), (35, 95, 205), (45, 125, 230), (65, 150, 245), (95, 175, 255), (135, 200, 255)]
+CREDITS = "ClamAV · rkhunter · chkrootkit · Lynis · Zero Breach Toolkit"
+
+
+def color_mode():
+    """'rgb', 'basic' or None: what this terminal can show."""
+    if os.environ.get("NO_COLOR") or not sys.stdout.isatty():
+        return None
+    return "rgb" if os.environ.get("COLORTERM") in ("truecolor", "24bit") else "basic"
+
+
+def banner(width, mode=None):
+    """The title screen as text (pure, so tests can check it). mode: 'rgb', 'basic' or None."""
+    def paint(text, rgb, basic="1;34"):
+        code = "38;2;%d;%d;%d" % rgb if mode == "rgb" and rgb else basic
+        return "\033[%sm%s\033[0m" % (code, text) if mode else text
+
+    def wrapped(text, rgb, basic):
+        return [pad + paint(line, rgb, basic) for line in textwrap.wrap(text, max(20, width - 4))]
+
+    pad = "  "
+    out = [""]
+    if width < 40:
+        out.append(pad + paint("THEK", RAMP[3]))
+    else:
+        out += [pad + paint("".join(GLYPHS[c][i] for c in "THEK"), RAMP[i]) for i in range(6)]
+    out.append("")
+    out.append(pad + paint("T U X  ·  H E A L T H  ·  E A S Y  ·  K I T" if width >= 50 else "Tux Health Easy Kit",
+                           RAMP[5], "34"))
+    out += wrapped(t("banner.concepts"), RAMP[4], "34")
+    out.append(pad + paint("─" * min(width - 4, 64), RAMP[1], "34"))
+    out += wrapped(t("banner.credits") + " " + CREDITS, None, "2")
+    return "\n".join(out)
+
+
+def show_banner():
+    if sys.stdout.isatty():
+        print(banner(shutil.get_terminal_size((80, 24)).columns, color_mode()))
 
 
 # ---------------------------------------------------------------- doctor
@@ -279,7 +328,7 @@ def _downloads():
 
 def clam_scan(target, root=False):
     if not shutil.which("clamscan"):
-        print(t("d.missing_tool", tool="clamscan") + " → " + t("m.install"))
+        print(t("d.missing_tool", tool="clamscan") + " → " + t("m.tools") + " › " + t("item.install"))
         return
     hits, _ = actions.clamscan(target, root)
     findings = actions.clam_findings(hits)
@@ -301,12 +350,12 @@ def clam_path():
 
 
 def clam_menu():
-    submenu(t("m.clamav"), [
-        (t("clam.update"), lambda: actions.do(["freshclam"], root=True)),
-        (t("clam.downloads"), lambda: clam_scan(_downloads())),
-        (t("clam.home"), lambda: clam_scan(os.path.expanduser("~"))),
-        (t("clam.path"), clam_path),
-        (t("clam.all"), lambda: clam_scan("/", root=True)),
+    return submenu(t("m.clamav"), [
+        leaf("clam_update", lambda: actions.do(["freshclam"], root=True), asks=True),
+        leaf("clam_downloads", lambda: clam_scan(_downloads())),
+        leaf("clam_home", lambda: clam_scan(os.path.expanduser("~"))),
+        leaf("clam_path", clam_path),
+        leaf("clam_all", lambda: clam_scan("/", root=True)),
     ])
 
 
@@ -385,10 +434,10 @@ def journal_ioc_scan():
 def zbt_menu():
     if not actions.zbt_script() and not actions.zbt_install():
         return
-    submenu(t("m.zbt"), [
-        (t("zbt.standard"), lambda: zbt_scan([])),
-        (t("zbt.full"), lambda: zbt_scan(["--scan-type", "full"])),
-        (t("zbt.journal"), journal_ioc_scan),
+    return submenu(t("m.zbt"), [
+        leaf("zbt_standard", lambda: zbt_scan([])),
+        leaf("zbt_full", lambda: zbt_scan(["--scan-type", "full"])),
+        leaf("zbt_journal", journal_ioc_scan),
     ])
 
 
@@ -399,71 +448,157 @@ def latest_report_dir():
     return os.path.realpath(path) if os.path.exists(path) else None
 
 
-def header():
+def status_line():
+    """Distro, last report with its counts, and a hint when tools are missing."""
     p = checks.platform()
+    parts = ["%s %s" % (p["id"], p["version"])]
     last = latest_report_dir()
-    last = os.path.basename(last) if last else t("menu.none")
-    print()
-    print(color("THEK", "1;36") + " · %s %s · %s: %s" % (p["id"], p["version"], t("menu.last"), last))
+    if not last:
+        parts.append("%s: %s" % (t("menu.last"), t("menu.none")))
+    else:
+        stamp = os.path.basename(last)
+        parts.append("%s: %s %s" % (t("menu.last"), stamp[:10], stamp[11:16].replace("-", ":")))
+        try:
+            with open(os.path.join(last, "report.json"), encoding="utf-8") as f:
+                s = json.load(f)["summary"]
+            if s["CRITICAL"]:
+                parts.append(color(t("menu.critical", n=s["CRITICAL"]), "1;31"))
+            if s["WARN"]:
+                parts.append(color(t("menu.warn", n=s["WARN"]), "33"))
+            if not (s["CRITICAL"] or s["WARN"]):
+                parts.append(color(t("menu.allok"), "32"))
+        except (OSError, ValueError, KeyError):
+            pass
+    print("  " + " · ".join(parts))
+    pkgs, _ = actions.missing_packages(p["family"])
+    if pkgs:
+        print("  " + color(t("menu.missing", n=len(pkgs)), "2"))
+
+
+def yes(prompt):
+    return (ask(prompt + " ") or "").strip() in ("s", "S", "y", "Y")
+
+
+def leaf(id, fn, asks=False):
+    """A menu option that first says what it does. asks=True: fn already asks with the exact command,
+    so the user answers one yes, not two."""
+    def run():
+        print("\n  " + color(t("item." + id), "1;34"))
+        lines = t("info." + id).split("\n")
+        for line in lines[:-1]:
+            print("  " + line)
+        print("  " + color(lines[-1], "2"))
+        if not asks and not yes("\n" + t("menu.go")):
+            print(t("skipped"))
+            return None
+        return fn()
+    return t("item." + id), run
+
+
+def interactive():
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def pause():
+    if interactive():
+        ask(color(t("menu.enter"), "2"))
+
+
+def clear():
+    if interactive():
+        print("\033[H\033[2J", end="")  # keeps the scrollback
+
+
+BACK = object()  # what submenu() returns, so going back from it does not ask for Enter
+
+
+def run_item(fn):
+    try:
+        if fn() is BACK:
+            return
+    except KeyboardInterrupt:
+        print("\n" + t("menu.interrupted"))
+    pause()
+
+
+def invalid(choice):
+    print(color(t("menu.invalid", choice=choice), "33"))
+    pause()
 
 
 def submenu(title, items):
     """items: list of (label, fn). Loops until 0 / EOF."""
     while True:
-        print("\n" + color(title, "1"))
-        for i, (label, _) in enumerate(items, 1):
-            print("  %2d  %s" % (i, label))
-        print("   0  " + t("menu.back"))
-        choice = ask("> ")
+        clear()
+        print("\n  " + color(title, "1;34"))
+        for i, (text, _) in enumerate(items, 1):
+            print("  %s  %s" % (color("%2d" % i, "1"), text))
+        print("  %s  %s" % (color(" 0", "1"), t("menu.back")))
+        choice = ask("\n" + t("menu.choose", last=len(items)) + " ")
         if choice is None or choice.strip() == "0":
-            return
-        if choice.strip().isdigit() and 1 <= int(choice) <= len(items):
-            try:
-                items[int(choice) - 1][1]()
-            except KeyboardInterrupt:
-                print("\n" + t("menu.interrupted"))
+            return BACK
+        c = choice.strip()
+        if c.isdigit() and 1 <= int(c) <= len(items):
+            run_item(items[int(c) - 1][1])
+        elif c:
+            invalid(c)
 
 
 def main_menu():
     handlers = MENU()
+    fns = {key: fn for key, _, _, fn in handlers}
     while True:
-        header()
-        for key, label, _ in handlers:
-            print("  %2s  %s" % (key, label))
-        print("   0  " + t("menu.exit"))
+        clear()
+        show_banner()
+        print()
+        status_line()
+        print()
+        for key, text, hint, _ in handlers:
+            hint = color(hint, "1;33") if key == "1" else color(hint, "2")
+            print("  %s  %s %s" % (color("%2s" % key, "1"), text.ljust(16), hint))
+        print("\n  %s  %s" % (color(" 0", "1"), t("menu.exit")))
         try:
-            choice = ask("> ")
+            choice = ask("\n" + t("menu.choose", last=handlers[-1][0]) + " ")
         except KeyboardInterrupt:
+            choice = None
             print()
-            return 0
         if choice is None or choice.strip() == "0":
+            print(t("menu.bye"))
             return 0
-        for key, _, fn in handlers:
-            if choice.strip() == key:
-                try:
-                    fn()
-                except KeyboardInterrupt:
-                    print("\n" + t("menu.interrupted"))
+        c = choice.strip()
+        if c in fns:
+            run_item(fns[c])
+        elif c:
+            invalid(c)
+
+
+def check_menu():
+    return submenu(t("m.check"), [
+        leaf("quick", lambda: audit("quick")),
+        leaf("full", lambda: audit("full")),
+        (t("m.clamav") + " ›", clam_menu),
+        (t("m.zbt") + " ›", zbt_menu),
+        leaf("secrets", secrets_scan),
+    ])
+
+
+def actions_menu(title, ids):
+    return submenu(title, [leaf(a, actions.ACTIONS[a], asks=True) for a in ids])
 
 
 def MENU():
+    """(key, label, hint, fn). Option 1 stays the total review: the README refers to it."""
     return [
-        ("1", t("m.total"), total_review),
-        ("2", t("m.quick"), lambda: audit("quick")),
-        ("3", t("m.full"), lambda: audit("full")),
-        ("4", t("m.clamav"), clam_menu),
-        ("5", t("m.zbt"), zbt_menu),
-        ("6", t("m.secrets"), secrets_scan),
-        ("7", t("m.clean"), lambda: submenu(t("m.clean"), [
-            (t("a." + a), actions.ACTIONS[a]) for a in
-            ("pkg_cache", "autoremove", "flatpak_unused", "journal_vacuum", "trash", "thumbnails", "coredumps")])),
-        ("8", t("m.harden"), lambda: submenu(t("m.harden"), [
-            (t("a." + a), actions.ACTIONS[a]) for a in ("firewall", "freshclam_auto", "auto_updates")])),
-        ("9", t("m.update"), actions.upgrade),
-        ("10", t("m.install"), actions.install),
-        ("11", t("m.external"), actions.update_external),
-        ("12", t("m.llm"), export_report),
-        ("13", t("m.view"), view_report),
+        ("1", t("m.total"), t("menu.recommended"), leaf("total", total_review)[1]),
+        ("2", t("m.check") + " ›", t("hint.check"), check_menu),
+        ("3", t("m.clean") + " ›", t("hint.clean"), lambda: actions_menu(t("m.clean"), (
+            "pkg_cache", "autoremove", "flatpak_unused", "journal_vacuum", "trash", "thumbnails", "coredumps"))),
+        ("4", t("m.protect") + " ›", t("hint.protect"), lambda: actions_menu(t("m.protect"), (
+            "firewall", "freshclam_auto", "auto_updates", "upgrade"))),
+        ("5", t("m.reports") + " ›", t("hint.reports"), lambda: submenu(t("m.reports"), [
+            leaf("view", view_report), leaf("export", export_report, asks=True)])),
+        ("6", t("m.tools") + " ›", t("hint.tools"), lambda: submenu(t("m.tools"), [
+            leaf("install", actions.install, asks=True), leaf("external", actions.update_external, asks=True)])),
     ]
 
 
