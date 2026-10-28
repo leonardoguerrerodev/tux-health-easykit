@@ -24,12 +24,12 @@ cd tux-health-easykit
 python3 THEK_run.py
 ```
 
-Only Python 3.9+ is needed: no `pip install`, no dependencies. **Option 1 · Total review does
-everything in one pass**: it asks what it needs first (downloads, installing tools), then runs on its
-own and leaves a single report.
+Only Python 3.9+ is needed: no `pip install`, no dependencies. **Option 1 · Get ready &
+update** shows what you have and what is missing and updates only that; **option 2 · Total review**
+then does everything in one pass and leaves a single report.
 
 ```
-python3 THEK_run.py                 # menu (option 1 = everything)
+python3 THEK_run.py                 # menu (1 = get ready, 2 = everything)
 python3 THEK_run.py --audit quick   # no root, no network
 python3 THEK_run.py --audit full    # asks for root once
 python3 THEK_run.py --install       # install missing tools (asks first)
@@ -43,16 +43,17 @@ python3 THEK_run.py --lang en       # or es; default follows your locale
 
 | Menu | What |
 |---|---|
-| **1 · Total review** | everything in one pass: full audit, journal against spyware indicators, optionally the Zero Breach Toolkit scan, one report, optional export |
-| **2 · Check ›** | **Quick audit**: pending updates and reboot, firewall, SELinux/AppArmor, open ports, `~/.ssh` permissions, authorized keys, autostart programs, processes running from `/tmp` or with deleted executables, ClamAV signature age, tokens in file names, world-writable files, Flatpak permissions, failed SSH logins. **Full audit**: the same plus, with **one** root prompt, rkhunter, chkrootkit, Lynis, package integrity (`rpm -Va` / `debsums` / `pacman -Qkk`), SUID programs no package owns, `sshd` settings, accounts without password, system cron, disk SMART health, nftables. **Antivirus (ClamAV) ›**: update signatures; scan Downloads, home, a folder or the whole computer; move detections to a quarantine. **Spyware ›**: Zero Breach Toolkit (pinned to a reviewed commit) and a check of the whole systemd journal against its indicators (streamed, no copy on disk). **Exposed secrets**: tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) and private keys inside files |
-| **3 · Clean ›** | package cache, unused packages (with preview), unused Flatpak runtimes, old journal, trash, thumbnails, coredumps |
-| **4 · Protect ›** | firewall, automatic ClamAV signatures, automatic updates where the distro recommends them, update the system now (distro tool, Flatpak, firmware) |
-| **5 · Reports ›** | view the last report; export it to `output_docs/` as a dated `.md` (redacted or full) for you to give to the AI you trust |
-| **6 · Tools ›** | install missing tools; update external components (shows what changed in Zero Breach Toolkit and moves only if you say yes) |
+| **1 · Get ready & update** | checks system tools, Zero Breach Toolkit, its spyware indicators and ClamAV signatures, then installs or updates only what is missing; looks for a new Zero Breach Toolkit version and moves only if you say yes |
+| **2 · Total review** | everything in one pass: full audit, journal against spyware indicators, optionally the Zero Breach Toolkit scan, one report, optional export |
+| **3 · Check ›** | **Quick audit**: pending updates and reboot, firewall, SELinux/AppArmor, open ports, `~/.ssh` permissions, authorized keys, autostart programs, processes running from `/tmp` or with deleted executables, ClamAV signature age, tokens in file names, world-writable files, Flatpak permissions, failed SSH logins. **Full audit**: the same plus, with **one** root prompt, rkhunter, chkrootkit, Lynis, package integrity (`rpm -Va` / `debsums` / `pacman -Qkk`), SUID programs no package owns, `sshd` settings, accounts without password, system cron, disk SMART health, nftables. **Antivirus (ClamAV) ›**: update signatures; scan Downloads, home, a folder or the whole computer; move detections to a quarantine. **Spyware ›**: Zero Breach Toolkit (pinned to a reviewed commit) and a check of the whole systemd journal against its indicators (streamed, no copy on disk). **Exposed secrets**: tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) and private keys inside files |
+| **4 · Clean ›** | package cache, unused packages (with preview), unused Flatpak runtimes, old journal, trash, thumbnails, coredumps |
+| **5 · Protect ›** | firewall, automatic ClamAV signatures, automatic updates where the distro recommends them, update the system now (distro tool, Flatpak, firmware) |
+| **6 · Reports ›** | view the last report; export it to `output_docs/` as a dated `.md` (redacted or full) for you to give to the AI you trust |
 
 Every option first explains what it does (whether it reads or changes something, needs your password
-or the network, and how long it takes) and **waits for your yes**. Every action that changes the
-system **shows the exact command and asks first**. Nothing detected is ever deleted: it goes to the
+or the network, and how long it takes) and **waits for your yes**. When an option finishes you are
+back in the main menu; answering no keeps you where you were. Every action that changes the system
+**shows the exact command and asks first**. Nothing detected is ever deleted: it goes to the
 quarantine with a manifest. SSH server settings are only reported, never edited (a wrong edit can
 lock you out).
 
@@ -91,7 +92,7 @@ comes from your distribution.
 |---|---|---|
 | Zero Breach Toolkit (code) | `vendor/zero-breach-toolkit/`, downloaded on first use | Python that runs as your user; pinned to a reviewed commit and checked after download |
 | Its indicator lists (~10 MB) | `vendor/zbt-indicators/` | third-party data that changes often |
-| ClamAV, rkhunter, chkrootkit, Lynis | your system, via **Install missing tools** | they run as root: your distro's signed packages are safer than code fetched from the web |
+| ClamAV, rkhunter, chkrootkit, Lynis | your system, via **1 · Get ready & update** | they run as root: your distro's signed packages are safer than code fetched from the web |
 | Exports for your AI | `output_docs/` | dated `.md` files you hand over yourself |
 | Internal reports, quarantine | `~/.local/share/thek/` | sensitive data, kept outside the repository |
 
@@ -99,9 +100,9 @@ comes from your distribution.
 
 ## Updating external components
 
-**Tools › Update external components** fetches Zero Breach Toolkit's published history,
+**1 · Get ready & update** fetches Zero Breach Toolkit's published history,
 shows the new commits and a change summary, and moves to the new version **only if you say yes**.
-Then it offers to refresh the indicator lists. The version THEK pins on first download is the
+Then it offers to refresh the indicator lists if they are missing or older than 30 days. The version THEK pins on first download is the
 one its authors reviewed; anything newer is your call.
 
 ## Using the report with your AI

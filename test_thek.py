@@ -385,7 +385,7 @@ def test_menu_texts():
         keys = i18n.STRINGS[lang]
         items = {k[5:] for k in keys if k.startswith("item.")}
         infos = {k[5:] for k in keys if k.startswith("info.")}
-        assert items == infos and len(items) == 27, (lang, items ^ infos)
+        assert items == infos and len(items) == 26, (lang, items ^ infos)
 
 
 def test_leaf_needs_yes():
@@ -401,6 +401,24 @@ def test_leaf_needs_yes():
         assert ran == [1]
     finally:
         builtins.input = real
+
+
+
+def test_navigation():
+    """Saying no stays in the submenu; once something ran, every level goes straight back to the main menu."""
+    ran = []
+    leaf = thek.leaf("quick", lambda: ran.append(1))
+
+    def drive(answers, menu):
+        it = iter(answers)
+        with _Patch((builtins, "input", lambda *a: next(it)), (thek, "interactive", lambda: False)):
+            return menu()
+
+    assert drive(["1", "n", "0"], lambda: thek.submenu("t", [leaf])) is thek.BACK and ran == []
+    assert drive(["1", "y"], lambda: thek.submenu("t", [leaf])) is thek.DONE and ran == [1]
+    nested = lambda: thek.submenu("outer", [("inner", lambda: thek.submenu("inner", [leaf]))])
+    assert drive(["1", "1", "y"], nested) is thek.DONE and ran == [1, 1]
+    assert drive(["1", "0", "0"], nested) is thek.BACK
 
 
 if __name__ == "__main__":

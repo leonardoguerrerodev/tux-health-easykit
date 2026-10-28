@@ -339,7 +339,7 @@ EXTERNAL = [{"name": "Zero Breach Toolkit", "dir": lambda: zbt_dir(), "url": ZBT
              "license": "Apache-2.0", "install": lambda: zbt_install()}]
 
 
-def update_external():
+def update_external(refresh_iocs=True):
     """For each external component: fetch, show what changed upstream, and move only if the user says yes."""
     for ext in EXTERNAL:
         path = ext["dir"]()
@@ -368,7 +368,7 @@ def update_external():
         print("    " + (stat_out.strip().splitlines() or [""])[-1])
         if do(["git", "-C", path, "checkout", "-q", latest]) is not None:
             print(t("ext.now", commit=(_git_head(path) or "?")[:7], pinned=ext["commit"][:7]))
-    if zbt_script():
+    if refresh_iocs and zbt_script():
         zbt_update()
 
 

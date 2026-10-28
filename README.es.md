@@ -24,12 +24,12 @@ cd tux-health-easykit
 python3 THEK_run.py
 ```
 
-Solo necesita Python 3.9+: sin `pip install` ni dependencias. **La opción 1 · Revisión total hace
-todo en una pasada**: primero pregunta lo que necesita (descargas, instalar herramientas), después
-corre sola y deja un único informe.
+Solo necesita Python 3.9+: sin `pip install` ni dependencias. **La opción 1 · Preparar y
+actualizar** muestra qué tienes y qué falta, y actualiza solo eso; **la opción 2 · Revisión total**
+después hace todo en una pasada y deja un único informe.
 
 ```
-python3 THEK_run.py                 # menú (opción 1 = todo)
+python3 THEK_run.py                 # menú (1 = preparar, 2 = todo)
 python3 THEK_run.py --audit quick   # sin root, sin red
 python3 THEK_run.py --audit full    # pide root una vez
 python3 THEK_run.py --install       # instala lo que falte (pregunta antes)
@@ -43,18 +43,18 @@ Códigos de salida de `--audit`: `0` nada encontrado, `2` algo crítico, `3` avi
 
 | Menú | Qué |
 |---|---|
-| **1 · Revisión total** | todo en una pasada: auditoría completa, journal contra indicadores de spyware, opcionalmente el escaneo de Zero Breach Toolkit, un solo informe y exportación opcional |
-| **2 · Revisar ›** | **Auditoría rápida**: actualizaciones y reinicio pendientes, firewall, SELinux/AppArmor, puertos abiertos, permisos de `~/.ssh`, claves autorizadas, programas que arrancan solos, procesos que corren desde `/tmp` o con el ejecutable borrado, antigüedad de las firmas de ClamAV, tokens en nombres de archivo, archivos escribibles por cualquiera, permisos de Flatpak, intentos fallidos de SSH. **Auditoría completa**: lo mismo y, con **una sola** petición de root, rkhunter, chkrootkit, Lynis, integridad de paquetes (`rpm -Va` / `debsums` / `pacman -Qkk`), programas SUID sin paquete, configuración de `sshd`, cuentas sin contraseña, cron del sistema, salud SMART de los discos, nftables. **Antivirus (ClamAV) ›**: actualizar firmas; escanear Descargas, el home, una carpeta o todo el equipo; mover lo detectado a la cuarentena. **Spyware ›**: Zero Breach Toolkit (fijado a un commit revisado) y la revisión de todo el journal de systemd contra sus indicadores (en streaming, sin copia a disco). **Secretos expuestos**: tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) y claves privadas dentro de archivos |
-| **3 · Limpiar ›** | caché de paquetes, paquetes sin uso (con vista previa), runtimes Flatpak sin uso, journal antiguo, papelera, miniaturas, coredumps |
-| **4 · Proteger ›** | firewall, firmas de ClamAV automáticas, actualizaciones automáticas donde la distro las recomienda, actualizar el sistema ahora (herramienta de la distro, Flatpak, firmware) |
-| **5 · Informes ›** | ver el último informe; exportarlo a `output_docs/` como `.md` con fecha y hora (censurado o completo) para que tú se lo des a la IA en la que confíes |
-| **6 · Herramientas ›** | instalar lo que falta; actualizar componentes externos (muestra qué cambió en Zero Breach Toolkit y actualiza solo si dices que sí) |
+| **1 · Preparar y actualizar** | revisa las herramientas del sistema, Zero Breach Toolkit, sus indicadores de spyware y las firmas de ClamAV, e instala o actualiza solo lo que falta; busca una versión nueva de Zero Breach Toolkit y la toma solo si dices que sí |
+| **2 · Revisión total** | todo en una pasada: auditoría completa, journal contra indicadores de spyware, opcionalmente el escaneo de Zero Breach Toolkit, un solo informe y exportación opcional |
+| **3 · Revisar ›** | **Auditoría rápida**: actualizaciones y reinicio pendientes, firewall, SELinux/AppArmor, puertos abiertos, permisos de `~/.ssh`, claves autorizadas, programas que arrancan solos, procesos que corren desde `/tmp` o con el ejecutable borrado, antigüedad de las firmas de ClamAV, tokens en nombres de archivo, archivos escribibles por cualquiera, permisos de Flatpak, intentos fallidos de SSH. **Auditoría completa**: lo mismo y, con **una sola** petición de root, rkhunter, chkrootkit, Lynis, integridad de paquetes (`rpm -Va` / `debsums` / `pacman -Qkk`), programas SUID sin paquete, configuración de `sshd`, cuentas sin contraseña, cron del sistema, salud SMART de los discos, nftables. **Antivirus (ClamAV) ›**: actualizar firmas; escanear Descargas, el home, una carpeta o todo el equipo; mover lo detectado a la cuarentena. **Spyware ›**: Zero Breach Toolkit (fijado a un commit revisado) y la revisión de todo el journal de systemd contra sus indicadores (en streaming, sin copia a disco). **Secretos expuestos**: tokens (GitHub, Hugging Face, OpenAI, Anthropic, AWS, Slack) y claves privadas dentro de archivos |
+| **4 · Limpiar ›** | caché de paquetes, paquetes sin uso (con vista previa), runtimes Flatpak sin uso, journal antiguo, papelera, miniaturas, coredumps |
+| **5 · Proteger ›** | firewall, firmas de ClamAV automáticas, actualizaciones automáticas donde la distro las recomienda, actualizar el sistema ahora (herramienta de la distro, Flatpak, firmware) |
+| **6 · Informes ›** | ver el último informe; exportarlo a `output_docs/` como `.md` con fecha y hora (censurado o completo) para que tú se lo des a la IA en la que confíes |
 
 Cada opción primero explica qué hace (si lee o cambia algo, si pide tu clave o usa la red, y cuánto
-tarda) y **espera tu sí**. Toda acción que modifica el sistema **muestra el comando exacto y
-pregunta antes**. Nada de lo detectado se borra: va a la cuarentena con un manifiesto. La
-configuración del servidor SSH solo se reporta, nunca se edita (una edición mala puede dejarte
-fuera).
+tarda) y **espera tu sí**. Cuando una opción termina vuelves al menú principal; si respondes que no,
+te quedas donde estabas. Toda acción que modifica el sistema **muestra el comando exacto y pregunta
+antes**. Nada de lo detectado se borra: va a la cuarentena con un manifiesto. La configuración del
+servidor SSH solo se reporta, nunca se edita (una edición mala puede dejarte fuera).
 
 ## Distros soportadas
 
@@ -91,7 +91,7 @@ tu distribución.
 |---|---|---|
 | Zero Breach Toolkit (código) | `vendor/zero-breach-toolkit/`, se descarga al primer uso | Python que corre con tu usuario; fijado a un commit revisado y verificado después de bajarlo |
 | Sus listas de indicadores (~10 MB) | `vendor/zbt-indicators/` | datos de terceros que cambian seguido |
-| ClamAV, rkhunter, chkrootkit, Lynis | tu sistema, con **Instalar herramientas que faltan** | corren como root: los paquetes firmados de tu distro son más seguros que código bajado de la web |
+| ClamAV, rkhunter, chkrootkit, Lynis | tu sistema, con **1 · Preparar y actualizar** | corren como root: los paquetes firmados de tu distro son más seguros que código bajado de la web |
 | Exportaciones para tu IA | `output_docs/` | archivos `.md` con fecha que tú entregas |
 | Informes internos, cuarentena | `~/.local/share/thek/` | datos sensibles, fuera del repositorio |
 
@@ -99,9 +99,9 @@ tu distribución.
 
 ## Actualizar componentes externos
 
-**Herramientas › Actualizar componentes externos** baja el historial publicado de Zero Breach Toolkit,
+**1 · Preparar y actualizar** baja el historial publicado de Zero Breach Toolkit,
 muestra los commits nuevos y un resumen de cambios, y pasa a la versión nueva **solo si dices que
-sí**. Después ofrece refrescar las listas de indicadores. La versión que THEK fija en la primera
+sí**. Después ofrece refrescar las listas de indicadores si faltan o tienen más de 30 días. La versión que THEK fija en la primera
 descarga es la que revisaron sus autores; lo más nuevo queda a tu criterio.
 
 ## Usar el informe con tu IA

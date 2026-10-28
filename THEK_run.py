@@ -258,6 +258,7 @@ def view_report():
     path = os.path.join(d, "report.md")
     if sys.stdout.isatty() and shutil.which("less"):
         subprocess.call(["less", "-R", path])
+        return DONE  # closing less is enough, no extra Enter
     else:
         with open(path, encoding="utf-8") as f:
             print(f.read())
@@ -290,17 +291,62 @@ def export_report(full=None):
     return path
 
 
+def _iocs_state():
+    if not actions.zbt_script():
+        return False, t("prep.missing")
+    iocs, n = actions.zbt_iocs()
+    if iocs is None or n == 0:
+        return False, t("prep.missing")
+    if iocs.is_stale(30):
+        return False, t("prep.iocs_old", n=len(iocs))
+    return True, t("prep.iocs_n", n=len(iocs))
+
+
+def _clam_state():
+    f = checks.clamav_signatures()[0]
+    return f["status"] == "OK", f["detail"] or t("prep.missing")
+
+
+def readiness():
+    """What THEK needs, in the order prepare() fixes it: [(key, ok, detail)]."""
+    pkgs, _ = actions.missing_packages(checks.platform()["family"])
+    have_zbt = bool(actions.zbt_script())
+    return [("tools", not pkgs, ", ".join(pkgs) or t("prep.ok")),
+            ("zbt", have_zbt, t("prep.ok") if have_zbt else t("prep.missing")),
+            ("iocs",) + _iocs_state(),
+            ("clam",) + _clam_state()]
+
+
+def show_readiness(items):
+    for key, ok, detail in items:
+        print("  %s %-26s %s" % (color("✓", "32") if ok else color("✗", "33"), t("prep." + key), color(detail, "2")))
+
+
+def prepare(upstream=True):
+    """Shows what is there and what is missing, then fixes only what is needed, each step with its own yes.
+    Order matters: installing brings git and ClamAV, which the next steps need."""
+    print()
+    show_readiness(readiness())
+    if actions.missing_packages(checks.platform()["family"])[0]:
+        actions.install()
+    if upstream:
+        actions.update_external(refresh_iocs=False)  # downloads ZBT if missing, otherwise looks for a new version
+    elif not actions.zbt_script():
+        actions.zbt_install()
+    if actions.zbt_script() and not _iocs_state()[0]:
+        actions.zbt_update()
+    if shutil.which("freshclam") and not _clam_state()[0]:
+        actions.freshclam()
+    items = readiness()
+    print()
+    show_readiness(items)
+    print("\n" + t("prep.ready" if all(ok for _, ok, _ in items) else "prep.pending"))
+
+
 def total_review():
     """Everything in one pass: questions first, then it runs on its own and leaves one report."""
     print("\n" + t("total.prep"))
-    if not actions.zbt_script():
-        actions.zbt_install()
-    if actions.zbt_script():
-        iocs, n_downloaded = actions.zbt_iocs()
-        if iocs is None or n_downloaded == 0 or iocs.is_stale(30):
-            actions.zbt_update()
-    if actions.missing_packages(checks.platform()["family"])[0]:
-        actions.install()
+    prepare(upstream=False)
     zbt = bool(actions.zbt_script()) and (ask(t("total.zbt_scan") + " ") or "").strip() in ("s", "S", "y", "Y")
     print("\n" + t("export.warning"))
     answer = (ask(t("total.export") + " ") or "").strip().lower()
@@ -328,7 +374,7 @@ def _downloads():
 
 def clam_scan(target, root=False):
     if not shutil.which("clamscan"):
-        print(t("d.missing_tool", tool="clamscan") + " → " + t("m.tools") + " › " + t("item.install"))
+        print(t("d.missing_tool", tool="clamscan") + " → " + t("menu.option1"))
         return
     hits, _ = actions.clamscan(target, root)
     findings = actions.clam_findings(hits)
@@ -470,9 +516,8 @@ def status_line():
         except (OSError, ValueError, KeyError):
             pass
     print("  " + " · ".join(parts))
-    pkgs, _ = actions.missing_packages(p["family"])
-    if pkgs:
-        print("  " + color(t("menu.missing", n=len(pkgs)), "2"))
+    if actions.missing_packages(p["family"])[0] or not actions.zbt_script():
+        print("  " + color(t("menu.need_prepare"), "33"))
 
 
 def yes(prompt):
@@ -489,8 +534,7 @@ def leaf(id, fn, asks=False):
             print("  " + line)
         print("  " + color(lines[-1], "2"))
         if not asks and not yes("\n" + t("menu.go")):
-            print(t("skipped"))
-            return None
+            return BACK  # said no: stay in this menu, no extra Enter
         return fn()
     return t("item." + id), run
 
@@ -509,16 +553,19 @@ def clear():
         print("\033[H\033[2J", end="")  # keeps the scrollback
 
 
-BACK = object()  # what submenu() returns, so going back from it does not ask for Enter
+BACK = object()  # went back or said no: stay in the menu you were in
+DONE = object()  # something ran and the user has seen it: straight to the main menu, no 0 needed
 
 
 def run_item(fn):
     try:
-        if fn() is BACK:
-            return
+        r = fn()
+        if r is BACK or r is DONE:
+            return r
     except KeyboardInterrupt:
         print("\n" + t("menu.interrupted"))
     pause()
+    return DONE
 
 
 def invalid(choice):
@@ -539,7 +586,8 @@ def submenu(title, items):
             return BACK
         c = choice.strip()
         if c.isdigit() and 1 <= int(c) <= len(items):
-            run_item(items[int(c) - 1][1])
+            if run_item(items[int(c) - 1][1]) is DONE:
+                return DONE
         elif c:
             invalid(c)
 
@@ -553,9 +601,10 @@ def main_menu():
         print()
         status_line()
         print()
+        width = max(len(text) for _, text, _, _ in handlers) + 2
         for key, text, hint, _ in handlers:
-            hint = color(hint, "1;33") if key == "1" else color(hint, "2")
-            print("  %s  %s %s" % (color("%2s" % key, "1"), text.ljust(16), hint))
+            hint = color(hint, "1;33") if hint == t("menu.recommended") else color(hint, "2")
+            print("  %s  %s%s" % (color("%2s" % key, "1"), text.ljust(width), hint))
         print("\n  %s  %s" % (color(" 0", "1"), t("menu.exit")))
         try:
             choice = ask("\n" + t("menu.choose", last=handlers[-1][0]) + " ")
@@ -587,18 +636,17 @@ def actions_menu(title, ids):
 
 
 def MENU():
-    """(key, label, hint, fn). Option 1 stays the total review: the README refers to it."""
+    """(key, label, hint, fn). The README refers to options 1 and 2."""
     return [
-        ("1", t("m.total"), t("menu.recommended"), leaf("total", total_review)[1]),
-        ("2", t("m.check") + " ›", t("hint.check"), check_menu),
-        ("3", t("m.clean") + " ›", t("hint.clean"), lambda: actions_menu(t("m.clean"), (
+        ("1", t("m.prepare"), t("hint.prepare"), leaf("prepare", prepare, asks=True)[1]),
+        ("2", t("m.total"), t("menu.recommended"), leaf("total", total_review)[1]),
+        ("3", t("m.check") + " ›", t("hint.check"), check_menu),
+        ("4", t("m.clean") + " ›", t("hint.clean"), lambda: actions_menu(t("m.clean"), (
             "pkg_cache", "autoremove", "flatpak_unused", "journal_vacuum", "trash", "thumbnails", "coredumps"))),
-        ("4", t("m.protect") + " ›", t("hint.protect"), lambda: actions_menu(t("m.protect"), (
+        ("5", t("m.protect") + " ›", t("hint.protect"), lambda: actions_menu(t("m.protect"), (
             "firewall", "freshclam_auto", "auto_updates", "upgrade"))),
-        ("5", t("m.reports") + " ›", t("hint.reports"), lambda: submenu(t("m.reports"), [
+        ("6", t("m.reports") + " ›", t("hint.reports"), lambda: submenu(t("m.reports"), [
             leaf("view", view_report), leaf("export", export_report, asks=True)])),
-        ("6", t("m.tools") + " ›", t("hint.tools"), lambda: submenu(t("m.tools"), [
-            leaf("install", actions.install, asks=True), leaf("external", actions.update_external, asks=True)])),
     ]
 
 
