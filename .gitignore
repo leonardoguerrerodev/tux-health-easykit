@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+# third-party code and indicators, downloaded on first use
+vendor/
+# reports exported for your AI: private, never published
+output_docs/
