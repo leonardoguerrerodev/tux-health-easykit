@@ -1,13 +1,29 @@
 # Tux Health EasyKit (THEK)
 
-**THEK = Tux Health EasyKit**: un botiquín para tu Linux, pensado para quien no es experto en seguridad.
+**THEK es una herramienta de flujo de trabajo.** El trabajo de fondo lo hacen proyectos de
+seguridad de código abierto conocidos; THEK los pone detrás de un solo menú de terminal y te guía
+para usarlos: qué instalar, qué actualizar, qué correr y en qué orden, y qué significan los
+resultados. Está pensada para quien no es experto en seguridad.
 
-Un menú de terminal para **auditar, escanear, limpiar y endurecer un equipo Linux**, con informes
-escritos para que **cualquier IA** (local o en la nube) los lea y te diga qué hacer.
+| Proyecto | Qué hace dentro de THEK | De dónde viene |
+|---|---|---|
+| [ClamAV](https://www.clamav.net/) | escaneo antivirus | paquetes de tu distro |
+| [rkhunter](https://rkhunter.sourceforge.net/) | búsqueda de rootkits | paquetes de tu distro |
+| [chkrootkit](https://www.chkrootkit.org/) | búsqueda de rootkits | paquetes de tu distro |
+| [Lynis](https://cisofy.com/lynis/) | auditoría de seguridad del sistema | paquetes de tu distro |
+| [Zero Breach Toolkit](https://github.com/interplains/Zero-Breach-Toolkit) | rastros de spyware mercenario conocido | se descarga en `vendor/` al primer uso, fijado a un commit revisado |
+| tu gestor de paquetes, systemd, firewall | actualizaciones, limpieza, endurecimiento | ya están en tu sistema |
 
-No reinventa nada: pone herramientas conocidas (ClamAV, rkhunter, chkrootkit, Lynis,
-[Zero Breach Toolkit](https://github.com/interplains/Zero-Breach-Toolkit) y tu gestor de paquetes)
-detrás de un solo menú, lee lo que entregan y lo junta en un informe.
+Lo que agrega THEK:
+
+- **Un flujo guiado**: *preparar* (instalar y actualizar lo que falta) → *revisión total* → un
+  informe. Cada opción explica qué hace y espera tu sí.
+- **Un solo informe** que junta todas esas salidas, más unos chequeos simples de solo lectura de tu
+  configuración (firewall, puertos abiertos, llaves SSH, programas que arrancan solos…), con una
+  copia censurada que tú le puedes dar a la IA en la que confíes, local o en la nube. THEK nunca
+  habla con ninguna IA.
+- **Barandas de seguridad**: el comando exacto se muestra antes de cambiar nada, lo detectado va a
+  una cuarentena en vez de borrarse, sin telemetría.
 
 [Read in English](README.md)
 

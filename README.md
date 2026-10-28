@@ -1,13 +1,28 @@
 # Tux Health EasyKit (THEK)
 
-**THEK = Tux Health EasyKit**: a first-aid kit for your Linux, made for people who are not security experts.
+**THEK is a workflow tool.** The real work is done by well-known open-source security projects;
+THEK puts them behind one terminal menu and walks you through them: what to install, what to
+update, what to run and in which order, and what the results mean. It is made for people who are
+not security experts.
 
-A terminal menu to **audit, scan, clean and harden a Linux machine**, with reports written so that
-**any AI model** (local or cloud) can read them and tell you what to do.
+| Project | What it does inside THEK | Where it comes from |
+|---|---|---|
+| [ClamAV](https://www.clamav.net/) | antivirus scans | your distro's packages |
+| [rkhunter](https://rkhunter.sourceforge.net/) | rootkit checks | your distro's packages |
+| [chkrootkit](https://www.chkrootkit.org/) | rootkit checks | your distro's packages |
+| [Lynis](https://cisofy.com/lynis/) | security audit of the system | your distro's packages |
+| [Zero Breach Toolkit](https://github.com/interplains/Zero-Breach-Toolkit) | traces of known mercenary spyware | downloaded into `vendor/` on first use, pinned to a reviewed commit |
+| your package manager, systemd, firewall | updates, cleanup, hardening | already on your system |
 
-It does not reinvent anything: it puts well-known tools (ClamAV, rkhunter, chkrootkit, Lynis,
-[Zero Breach Toolkit](https://github.com/interplains/Zero-Breach-Toolkit) and your package manager)
-behind one menu, reads their output and turns it into one report.
+What THEK itself adds:
+
+- **A guided flow**: *get ready* (install and update what is missing) → *total review* → one report.
+  Every option explains what it does and waits for your yes.
+- **One report** that joins all those outputs, plus a set of simple read-only checks of your
+  settings (firewall, open ports, SSH keys, autostart…), with a redacted copy you can hand to any AI
+  you trust, local or cloud. THEK itself never talks to an AI.
+- **Safety rails**: the exact command is shown before anything changes, detections go to a
+  quarantine instead of being deleted, no telemetry.
 
 [Leer en español](README.es.md)
 
